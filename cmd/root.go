@@ -6,10 +6,16 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+)
+
+var (
+	logLevel  string
+	logFormat string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -22,15 +28,7 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
-		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-		log.Info().Msg("This is an info log")
-		log.Debug().Msg("This is a debug log")
-		log.Trace().Msg("This is a trace log")
-		log.Warn().Msg("This is a warn log")
-		log.Error().Msg("This is an error log")
 		fmt.Println("Welcome to k8s-controller-tutorial CLI!")
 	},
 }
@@ -45,13 +43,57 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.k8s-controller-tutorial.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
+	// Logger flags
+	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Log level: trace, debug, info, warn, error, none")
+	rootCmd.PersistentFlags().StringVar(&logFormat, "log-format", "json", "Log format: json, console")
+	
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	cobra.OnInitialize(initializeLogger)
+}
+
+func initializeLogger() {
+	level := parseLogLevel(logLevel)
+	zerolog.SetGlobalLevel(level)
+
+	zerolog.TimeFieldFormat = "2006-01-02 15:04:05.000"
+
+	baseLogger := zerolog.New(os.Stderr).With().Timestamp()
+	
+	// caller for trace level
+	if level == zerolog.TraceLevel {
+		baseLogger = baseLogger.Caller()
+	}
+
+	if strings.ToLower(logFormat) == "console" {
+		output := zerolog.ConsoleWriter{
+			Out:        os.Stderr,
+			TimeFormat: "15:04:05",
+		}
+		log.Logger = baseLogger.Logger().Output(output)
+	} else {
+		log.Logger = baseLogger.Logger()
+	}
+	
+	log.Debug().Str("format", logFormat).Str("level", logLevel).
+		Msg("Logger initialized")
+}
+
+func parseLogLevel(level string) zerolog.Level {
+	switch strings.ToLower(level) {
+	case "trace":
+		return zerolog.TraceLevel
+	case "debug":
+		return zerolog.DebugLevel
+	case "info":
+		return zerolog.InfoLevel
+	case "warn":
+		return zerolog.WarnLevel
+	case "error":
+		return zerolog.ErrorLevel
+	case "none":
+		return zerolog.Disabled
+	default:
+		return zerolog.InfoLevel
+	}
 }
