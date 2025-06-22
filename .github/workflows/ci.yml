@@ -59,7 +59,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GH_TOKEN }}
       - name: Build Docker image
         run: docker build -t ghcr.io/${{ steps.vars.outputs.normalized_repo }}/app:${{ steps.vars.outputs.docker_tag }} .
       - name: Trivy Scan
