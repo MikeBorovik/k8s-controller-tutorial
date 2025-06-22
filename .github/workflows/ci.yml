@@ -31,7 +31,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.2'
-      - name: Set version
+      - name: Setup vars
         id: vars
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
@@ -47,6 +47,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
           echo "docker_tag=$DOCKER_TAG" >> $GITHUB_OUTPUT
+          echo "normalized_repo=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
       - name: Build
         run: make build
       - name: Test
@@ -60,15 +61,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Docker image
-        run: |
-          normalized_repo=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')
-          docker build -t ghcr.io/$normalized_repo/app:${{ steps.vars.outputs.docker_tag }} .
+        run: docker build -t ghcr.io/${{ steps.vars.outputs.normalized_repo }}/app:${{ steps.vars.outputs.docker_tag }} .
       - name: Trivy Scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ghcr.io/${{ github.repository }}/app:${{ steps.vars.outputs.docker_tag }}
+          image-ref: ghcr.io/${{ steps.vars.outputs.normalized_repo }}/app:${{ steps.vars.outputs.docker_tag }}
       - name: Push Docker image
-        run: docker push ghcr.io/${{ github.repository }}/app:${{ steps.vars.outputs.docker_tag }}
+        run: docker push ghcr.io/${{ steps.vars.outputs.normalized_repo }}/app:${{ steps.vars.outputs.docker_tag }}
       - name: Package Helm chart
         run: |
           helm package charts/app --version ${{ steps.vars.outputs.version }} --app-version ${{ steps.vars.outputs.app_version }}
