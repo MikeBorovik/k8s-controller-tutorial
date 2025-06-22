@@ -60,7 +60,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Docker image
-        run: docker build -t ghcr.io/${{ github.repository }}/app:${{ steps.vars.outputs.docker_tag }} .
+        run: |
+          normalized_repo=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')
+          docker build -t ghcr.io/$normalized_repo/app:${{ steps.vars.outputs.docker_tag }} .
       - name: Trivy Scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
