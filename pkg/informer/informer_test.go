@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -98,4 +99,43 @@ func TestStartDeploymentInformer_CoversFunction(t *testing.T) {
 	// Give the informer some time to start and process events
 	time.Sleep(1 * time.Second)
 	cancel()
+}
+
+func TestGetDeploymentsNames(t *testing.T) {
+	_, clientset, cleanup := testutil.SetupEnv(t)
+	defer cleanup()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	factory := informers.NewSharedInformerFactoryWithOptions(
+		clientset,
+		30*time.Second,
+		informers.WithNamespace("default"),
+	)
+	informer := factory.Apps().V1().Deployments().Informer()
+	deployment1 := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sample-deployment-1",
+			Namespace: "default",
+		},
+	}
+	deployment2 := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sample-deployment-2",
+			Namespace: "default",
+		},
+	}
+
+	informer.GetStore().Add(deployment1)
+	informer.GetStore().Add(deployment2)
+
+	go func() {
+		factory.Start(ctx.Done())
+		factory.WaitForCacheSync(ctx.Done())
+	}()
+
+	names := GetDeploymentsNames()
+
+	require.ElementsMatch(t, []string{"sample-deployment-1", "sample-deployment-2"}, names)
 }
