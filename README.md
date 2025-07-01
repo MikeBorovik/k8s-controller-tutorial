@@ -8,10 +8,12 @@ A tutorial project demonstrating how to build a Kubernetes controller in Go. Thi
 
 - CLI interface built with Cobra
 - Built-in HTTP server using FastHTTP
-- Kubernetes API integration
+- Kubernetes API integration with client-go
+- Deployment informers for real-time monitoring
 - Flexible logging system with zerolog
 - Ready-to-use Helm charts for Kubernetes deployment
 - CI/CD pipeline with GitHub Actions
+- Comprehensive test suite
 
 ## Requirements
 
@@ -51,18 +53,26 @@ helm install k8s-controller ./chart/app
 # Show help
 ./k8s-controller-tutorial --help
 
-# Start the HTTP server
-./k8s-controller-tutorial server --port 8080
+# Start the HTTP server and deployment informer
+./k8s-controller-tutorial server --port 8080 --kubeconfig ~/.kube/config
+
+# Use in-cluster configuration when running in Kubernetes
+./k8s-controller-tutorial server --in-cluster
+
+# List deployments in the default namespace
+./k8s-controller-tutorial list --kubeconfig ~/.kube/config
 
 # Configure logging level
 ./k8s-controller-tutorial --log-level debug server
+./k8s-controller-tutorial --log-level trace --log-format console server
 ```
 
 ### Available Commands
 
-- `server` - start the HTTP server
-- `list` - example command for working with lists
+- `server` - start the HTTP server and deployment informer
+- `list` - list deployments in the default namespace
 - `go_basic` - basic Go examples
+- `abrakadabra` - example command
 
 ## Project Structure
 
@@ -71,8 +81,12 @@ helm install k8s-controller ./chart/app
 ├── chart/                  # Helm charts for Kubernetes deployment
 ├── cmd/                    # CLI commands (using Cobra)
 │   ├── root.go             # Root command
-│   ├── server.go           # Server command
+│   ├── server.go           # Server command with FastHTTP
+│   ├── list.go             # List command for K8s resources
 │   └── ...
+├── pkg/                    # Package code
+│   └── informer/           # Kubernetes informers
+│       └── informer.go     # Deployment informer implementation
 ├── Dockerfile              # Docker image build
 ├── go.mod                  # Go modules
 ├── go.sum                  # Go dependencies
@@ -87,13 +101,61 @@ helm install k8s-controller ./chart/app
 ### Testing
 
 ```bash
+# Run all tests using the test environment (recommended)
+make test
+
+# Run tests directly (without test environment)
 go test ./...
+
+# Skip informer tests in short mode
+go test -short ./...
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run tests for specific package
+go test ./cmd
+go test ./pkg/informer
+```
+
+The `make test` command sets up the proper test environment using `setup-envtest` and handles dependencies automatically, making it the preferred way to run tests. It also generates JUnit XML reports for CI integration.
+
+For code coverage reports:
+
+```bash
+# Generate coverage reports
+make test-coverage
+```
+
+This will create both a standard Go coverage report and a Cobertura XML report for CI tools.
+
+### Development Commands
+
+```bash
+# Format code
+make format
+
+# Run linter
+make lint
+
+# Build the binary
+make build
+
+# Run the application
+make run
+
+# Clean up build artifacts
+make clean
 ```
 
 ### Building Docker Image
 
 ```bash
+# Using docker directly
 docker build -t k8s-controller-tutorial:latest .
+
+# Using Makefile
+make docker-build
 ```
 
 ### CI/CD Pipeline
@@ -106,6 +168,24 @@ This project uses GitHub Actions for continuous integration and delivery:
 - Runs security scanning with Trivy
 
 The workflow is defined in `.github/workflows/ci.yml`.
+
+## Key Components
+
+### FastHTTP Server
+
+The project includes a high-performance HTTP server using the FastHTTP library, which is significantly faster than the standard Go HTTP server.
+
+### Kubernetes Informers
+
+The controller uses Kubernetes informers to efficiently watch for changes to Deployment resources. This allows real-time monitoring without constant polling of the API server.
+
+### Structured Logging
+
+Zerolog provides structured, JSON-formatted logs with configurable log levels (trace, debug, info, warn, error) and output formats.
+
+### Test Environment
+
+The project uses `setup-envtest` from the Kubernetes controller-runtime project to create a proper testing environment for Kubernetes API interactions. This allows tests to run against a real API server without needing an actual Kubernetes cluster.
 
 ## License
 
