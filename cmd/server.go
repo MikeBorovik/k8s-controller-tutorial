@@ -46,7 +46,7 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-func getServerKubeClient(kubeconfigPath string, inCluster bool)  (*kubernetes.Clientset, error) {
+func getServerKubeClient(kubeconfigPath string, inCluster bool) (*kubernetes.Clientset, error) {
 	var config *rest.Config
 	var err error
 	if inCluster {
