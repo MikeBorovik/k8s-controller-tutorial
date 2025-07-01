@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -9,6 +6,7 @@ import (
 	"os"
 
 	"github.com/MikeBorovik/k8s-controller-tutorial/pkg/informer"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/valyala/fasthttp"
@@ -34,9 +32,7 @@ var serverCmd = &cobra.Command{
 		ctx := context.Background()
 		go informer.StartDeploymentInformer(ctx, clientset)
 
-		handler := func(ctx *fasthttp.RequestCtx) {
-			fmt.Fprintf(ctx, "Hello from FastHTTP!")
-		}
+		handler := createHandler(&informer.DeploymentInformer{})
 		addr := fmt.Sprintf(":%d", serverPort)
 		log.Info().Msgf("Starting FastHTTP server on %s", addr)
 		if err := fasthttp.ListenAndServe(addr, handler); err != nil {
@@ -44,6 +40,35 @@ var serverCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
+}
+
+func createHandler(lister informer.DeploymentLister) fasthttp.RequestHandler {
+	return func(ctx *fasthttp.RequestCtx) {
+		requestID := uuid.New().String()
+		ctx.Response.Header.Set("X-Request-ID", requestID)
+		logger := log.With().Str("request_id", requestID).Logger()
+		switch string(ctx.Path()) {
+		case "/deployments":
+			ctx.Response.Header.Set("Content-Type", "application/json")
+			deployments := lister.GetDeploymentsNames()
+			logger.Info().Msgf("Deployments: %v", deployments)
+			ctx.SetStatusCode(200)
+			ctx.Write([]byte("["))
+			for i, name := range deployments {
+				ctx.WriteString("\"")
+				ctx.WriteString(name)
+				ctx.WriteString("\"")
+				if i < len(deployments)-1 {
+					ctx.WriteString(",")
+				}
+			}
+			ctx.Write([]byte("]"))
+			return
+		default:
+			logger.Info().Msg("Default path received")
+			fmt.Fprintf(ctx, "Hello from FastHTTP!")
+		}
+	}
 }
 
 func getServerKubeClient(kubeconfigPath string, inCluster bool) (*kubernetes.Clientset, error) {

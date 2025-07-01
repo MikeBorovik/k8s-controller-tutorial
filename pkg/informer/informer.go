@@ -6,13 +6,23 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
+
+type DeploymentInformer struct{}
+
+func (d *DeploymentInformer) GetDeploymentsNames() []string {
+	return GetDeploymentsNames()
+}
+
+type DeploymentLister interface {
+	GetDeploymentsNames() []string
+}
 
 var informer cache.SharedIndexInformer
 
