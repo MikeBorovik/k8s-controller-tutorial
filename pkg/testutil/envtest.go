@@ -78,4 +78,30 @@ func SetupEnv(t *testing.T) (*envtest.Environment, *kubernetes.Clientset, func()
 	return env, clientset, cleanup
 }
 
+// NewObjectMeta creates a new ObjectMeta with the given name and namespace.
+func NewObjectMeta(name, namespace string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      name,
+		Namespace: namespace,
+	}
+}
+
+// NewDeploymentSpec creates a new DeploymentSpec with the given replicas, labels, and container image.
+func NewDeploymentSpec(replicas int32, labels map[string]string, image string) appsv1.DeploymentSpec {
+	return appsv1.DeploymentSpec{
+		Replicas: int32Ptr(replicas),
+		Selector: &metav1.LabelSelector{
+			MatchLabels: labels,
+		},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{Labels: labels},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{Name: "container", Image: image},
+				},
+			},
+		},
+	}
+}
+
 func int32Ptr(i int32) *int32 { return &i }
