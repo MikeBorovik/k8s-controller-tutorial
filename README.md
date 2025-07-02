@@ -9,6 +9,7 @@ A tutorial project demonstrating how to build a Kubernetes controller in Go. Thi
 - CLI interface built with Cobra
 - Built-in HTTP server using FastHTTP
 - Kubernetes API integration with client-go
+- Deployment controller for reconciling Deployment resources
 - Deployment informers for real-time monitoring
 - Flexible logging system with zerolog
 - Ready-to-use Helm charts for Kubernetes deployment
@@ -53,7 +54,7 @@ helm install k8s-controller ./chart/app
 # Show help
 ./k8s-controller-tutorial --help
 
-# Start the HTTP server and deployment informer
+# Start the HTTP server and deployment controller
 ./k8s-controller-tutorial server --port 8080 --kubeconfig ~/.kube/config
 
 # Use in-cluster configuration when running in Kubernetes
@@ -69,31 +70,42 @@ helm install k8s-controller ./chart/app
 
 ### Available Commands
 
-- `server` - start the HTTP server and deployment informer
+- `server` - start the HTTP server, deployment informer, and deployment controller
 - `list` - list deployments in the default namespace
-- `go_basic` - basic Go examples
-- `abrakadabra` - example command
+
+## Deployment Controller
+
+The deployment controller is implemented using the `controller-runtime` library. It watches for changes to `Deployment` resources in the Kubernetes cluster and reconciles them. This is useful for implementing custom logic for managing deployments.
+
+### Key Features
+- Watches for `Deployment` resource changes
+- Logs reconciliation events
+- Uses `controller-runtime` for efficient resource management
+
+The controller is started automatically when you run the `server` command.
 
 ## Project Structure
 
 ```
 .
-├── chart/                  # Helm charts for Kubernetes deployment
-├── cmd/                    # CLI commands (using Cobra)
-│   ├── root.go             # Root command
-│   ├── server.go           # Server command with FastHTTP
-│   ├── list.go             # List command for K8s resources
+├── chart/                           # Helm charts for Kubernetes deployment
+├── cmd/                             # CLI commands (using Cobra)
+│   ├── root.go                      # Root command
+│   ├── server.go                    # Server command with FastHTTP
+│   ├── list.go                      # List command for K8s resources
 │   └── ...
-├── pkg/                    # Package code
-│   └── informer/           # Kubernetes informers
-│       └── informer.go     # Deployment informer implementation
-├── Dockerfile              # Docker image build
-├── go.mod                  # Go modules
-├── go.sum                  # Go dependencies
-├── LICENSE                 # License
-├── main.go                 # Entry point
-├── Makefile                # Build and test commands
-└── README.md               # Documentation
+├── pkg/                             # Package code
+│   ├── informer/                    # Kubernetes informers
+│   │   └── informer.go              # Deployment informer implementation
+│   └── ctrl/                        # Deployment controller
+│       └── deployment_controller.go # Deployment controller implementation
+├── Dockerfile                       # Docker image build
+├── go.mod                           # Go modules
+├── go.sum                           # Go dependencies
+├── LICENSE                          # License
+├── main.go                          # Entry point
+├── Makefile                         # Build and test commands
+└── README.md                        # Documentation
 ```
 
 ## Development
