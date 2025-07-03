@@ -16,11 +16,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	ctrlruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 var serverPort int
 var serverInCluster bool
 var serverKubeConfig string
+var metricsPort int
 
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
@@ -35,7 +37,9 @@ var serverCmd = &cobra.Command{
 		ctx := context.Background()
 		go informer.StartDeploymentInformer(ctx, clientset)
 
-		mgr, err := ctrlruntime.NewManager(ctrlruntime.GetConfigOrDie(), manager.Options{})
+		mgr, err := ctrlruntime.NewManager(ctrlruntime.GetConfigOrDie(), manager.Options{
+			Metrics: server.Options{BindAddress: fmt.Sprintf(":%d", metricsPort)},
+		})
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create controller-runtime manager")
 			os.Exit(1)
