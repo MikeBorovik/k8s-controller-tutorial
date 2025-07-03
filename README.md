@@ -11,6 +11,8 @@ A tutorial project demonstrating how to build a Kubernetes controller in Go. Thi
 - Kubernetes API integration with client-go
 - Deployment controller for reconciling Deployment resources
 - Deployment informers for real-time monitoring
+- Prometheus metrics for monitoring controller performance
+- Leader election for high availability in multi-replica deployments
 - Flexible logging system with zerolog
 - Ready-to-use Helm charts for Kubernetes deployment
 - CI/CD pipeline with GitHub Actions
@@ -60,6 +62,9 @@ helm install k8s-controller ./chart/app
 # Use in-cluster configuration when running in Kubernetes
 ./k8s-controller-tutorial server --in-cluster
 
+# Configure metrics and leader election
+./k8s-controller-tutorial server --metrics-port 8081 --enable-leader-election=true
+
 # List deployments in the default namespace
 ./k8s-controller-tutorial list --kubeconfig ~/.kube/config
 
@@ -81,8 +86,36 @@ The deployment controller is implemented using the `controller-runtime` library.
 - Watches for `Deployment` resource changes
 - Logs reconciliation events
 - Uses `controller-runtime` for efficient resource management
+- Exposes Prometheus metrics for monitoring
+- Supports leader election for high availability
 
 The controller is started automatically when you run the `server` command.
+
+## Metrics
+
+The controller exposes Prometheus metrics on a dedicated port (default: 8081). These metrics include:
+
+- Standard controller-runtime metrics (reconciliation counts, durations, etc.)
+- Custom metrics specific to deployment processing
+- Go runtime metrics (memory usage, goroutines, etc.)
+
+You can access metrics by navigating to `http://localhost:8081/metrics` when the server is running.
+
+## Leader Election
+
+When running multiple replicas of the controller in a Kubernetes cluster, leader election ensures that only one instance is actively reconciling resources at a time. This prevents conflicts and duplicate processing.
+
+Leader election is enabled by default and can be configured with the `--enable-leader-election` flag. The leader election mechanism uses Kubernetes ConfigMaps to coordinate between replicas.
+
+### Configuration
+
+```bash
+# Enable leader election (default)
+./k8s-controller-tutorial server --enable-leader-election=true
+
+# Disable leader election
+./k8s-controller-tutorial server --enable-leader-election=false
+```
 
 ## Project Structure
 
@@ -190,6 +223,14 @@ The project includes a high-performance HTTP server using the FastHTTP library, 
 ### Kubernetes Informers
 
 The controller uses Kubernetes informers to efficiently watch for changes to Deployment resources. This allows real-time monitoring without constant polling of the API server.
+
+### Metrics Server
+
+The controller includes a Prometheus metrics server that exposes metrics about controller performance and resource usage. These metrics can be scraped by Prometheus and visualized in dashboards.
+
+### Leader Election
+
+For high availability deployments, the controller supports leader election to ensure that only one instance is actively reconciling resources at a time. This prevents conflicts and duplicate processing when running multiple replicas.
 
 ### Structured Logging
 
