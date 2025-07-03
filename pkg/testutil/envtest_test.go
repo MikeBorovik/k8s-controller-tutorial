@@ -60,4 +60,10 @@ func TestSetupEnv(t *testing.T) {
 		require.Equal(t, name.Name, deployment.Name)
 		require.Equal(t, name.Namespace, deployment.Namespace)
 	}
+
+	// Verify that the ConfigMap for leader election was created
+	configMap, err := clientset.CoreV1().ConfigMaps("default").Get(ctx, "test-leader-election", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "test-leader-election", configMap.Name)
+	require.Equal(t, "default", configMap.Namespace)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -17,6 +18,7 @@ import (
 )
 
 // SetupEnv starts envtest, creates a clientset, populates the cluster with sample Deployments, and returns env, clientset, and cleanup.
+// It also creates necessary resources for testing metrics and leader election.
 func SetupEnv(t *testing.T) (*envtest.Environment, *kubernetes.Clientset, func()) {
 	t.Helper()
 	ctx := context.Background()
@@ -50,6 +52,14 @@ func SetupEnv(t *testing.T) (*envtest.Environment, *kubernetes.Clientset, func()
 	clientset, err := kubernetes.NewForConfig(cfg)
 	require.NoError(t, err)
 
+	// Create default namespace if it doesn't exist
+	_, err = clientset.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "default"},
+	}, metav1.CreateOptions{})
+	if err != nil && !errors.IsAlreadyExists(err) {
+		require.NoError(t, err)
+	}
+
 	// Create sample Deployments
 	for i := 1; i <= 2; i++ {
 		dep := &appsv1.Deployment{
@@ -69,6 +79,18 @@ func SetupEnv(t *testing.T) (*envtest.Environment, *kubernetes.Clientset, func()
 			},
 		}
 		_, err := clientset.AppsV1().Deployments("default").Create(ctx, dep, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+	
+	// Create a ConfigMap for leader election testing
+	_, err = clientset.CoreV1().ConfigMaps("default").Create(ctx, &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-leader-election",
+			Namespace: "default",
+		},
+		Data: map[string]string{},
+	}, metav1.CreateOptions{})
+	if err != nil && !errors.IsAlreadyExists(err) {
 		require.NoError(t, err)
 	}
 
