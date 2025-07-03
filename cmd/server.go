@@ -23,6 +23,7 @@ var serverPort int
 var serverInCluster bool
 var serverKubeConfig string
 var metricsPort int
+var enableLeaderElection bool
 
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
@@ -38,7 +39,10 @@ var serverCmd = &cobra.Command{
 		go informer.StartDeploymentInformer(ctx, clientset)
 
 		mgr, err := ctrlruntime.NewManager(ctrlruntime.GetConfigOrDie(), manager.Options{
-			Metrics: server.Options{BindAddress: fmt.Sprintf(":%d", metricsPort)},
+			Metrics:                 server.Options{BindAddress: fmt.Sprintf(":%d", metricsPort)},
+			LeaderElection:          enableLeaderElection,
+			LeaderElectionID:        "k8s-controller-tutorial-leader-election",
+			LeaderElectionNamespace: "default",
 		})
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create controller-runtime manager")
@@ -114,4 +118,6 @@ func init() {
 	serverCmd.Flags().IntVar(&serverPort, "port", 8080, "Port to run the server on")
 	serverCmd.Flags().StringVar(&serverKubeConfig, "kubeconfig", "", "Path to kubeconfig")
 	serverCmd.Flags().BoolVar(&serverInCluster, "in-cluster", false, "Use in-cluster kubeconfg")
+	serverCmd.Flags().IntVar(&metricsPort, "metrics-port", 8081, "Port for metrics server")
+	serverCmd.Flags().BoolVar(&enableLeaderElection, "enable-leader-election", true, "Enable leader election for controller manager")
 }
